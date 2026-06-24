@@ -2,8 +2,7 @@
 package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.model.LostItem;
-import com.example.lostfound_project.repository.LostItemRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.lostfound_project.service.LostItemService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,31 +14,29 @@ import java.util.Map;
 @RequestMapping("/api")
 public class LostFoundController {
 
-    private final LostItemRepository lostItemRepository;
+    private final LostItemService lostItemService;
 
-    @Autowired
-    public LostFoundController(LostItemRepository lostItemRepository) {
-        this.lostItemRepository = lostItemRepository;
+    public LostFoundController(LostItemService lostItemService) {
+        this.lostItemService = lostItemService;
     }
 
     // 분실물 등록
     @PostMapping("/lost")
     public ResponseEntity<?> createLostItem(@RequestBody LostItem item) {
-        // 익명일 때 비밀번호 필수
-        if ("익명".equals(item.getWriter())
-                && (item.getPassword() == null || item.getPassword().isEmpty())) {
+        try {
+            LostItem saved = lostItemService.createLostItem(item);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity
                     .badRequest()
-                    .body("익명 글은 비밀번호를 설정해야 합니다.");
+                    .body(e.getMessage());
         }
-        LostItem saved = lostItemRepository.save(item);
-        return ResponseEntity.ok(saved);
     }
 
     // 분실물 전체 조회
     @GetMapping("/lost")
     public List<LostItem> getAllLostItems() {
-        return lostItemRepository.findAll();
+        return lostItemService.getAllLostItems();
     }
 
     // 분실물 삭제
@@ -48,28 +45,18 @@ public class LostFoundController {
             @PathVariable Long id,
             @RequestBody Map<String, String> payload) {
 
-        LostItem item = lostItemRepository.findById(id).orElse(null);
-        if (item == null) {
+        LostItemService.DeleteResult result = lostItemService.deleteLostItem(id, payload);
+
+        if (result == LostItemService.DeleteResult.NOT_FOUND) {
             return ResponseEntity.notFound().build();
         }
 
-        if ("익명".equals(item.getWriter())) {
-            String pw = payload.get("password");
-            if (pw == null || !pw.equals(item.getPassword())) {
-                return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN)
-                        .body("비밀번호가 틀렸습니다.");
-            }
-        } else {
-            String userId = payload.get("userId");
-            if (!item.getWriter().equals(userId)) {
-                return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN)
-                        .body("작성자만 삭제할 수 있습니다.");
-            }
+        if (result != LostItemService.DeleteResult.SUCCESS) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body(result.getMessage());
         }
 
-        lostItemRepository.deleteById(id);
-        return ResponseEntity.ok("삭제되었습니다.");
+        return ResponseEntity.ok(result.getMessage());
     }
 }
