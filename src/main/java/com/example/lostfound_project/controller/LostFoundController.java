@@ -5,6 +5,8 @@ import com.example.lostfound_project.dto.LostItemCreateRequest;
 import com.example.lostfound_project.dto.LostItemResponse;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.service.LostItemService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Lost Item", description = "분실물 등록, 조회, 수정, 삭제 API")
 public class LostFoundController {
 
     private final LostItemService lostItemService;
@@ -24,6 +27,7 @@ public class LostFoundController {
 
     // 분실물 등록
     @PostMapping("/lost")
+    @Operation(summary = "분실물 등록", description = "분실물 정보를 등록합니다. 익명 작성자는 삭제/수정을 위한 비밀번호가 필요합니다.")
     public ResponseEntity<?> createLostItem(@RequestBody LostItemCreateRequest request) {
         try {
             LostItemResponse response = lostItemService.createLostItem(request);
@@ -37,6 +41,7 @@ public class LostFoundController {
 
     // 분실물 전체 조회
     @GetMapping("/lost")
+    @Operation(summary = "분실물 목록 조회", description = "분실물 목록을 조회합니다. keyword와 location으로 검색할 수 있습니다.")
     public List<LostItemResponse> getLostItems(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String location) {
@@ -45,6 +50,7 @@ public class LostFoundController {
 
     // 분실물 상세 조회
     @GetMapping("/lost/{id}")
+    @Operation(summary = "분실물 상세 조회", description = "분실물 ID로 단일 분실물 정보를 조회합니다.")
     public ResponseEntity<LostItemResponse> getLostItem(@PathVariable Long id) {
         return lostItemService.getLostItem(id)
                 .map(ResponseEntity::ok)
@@ -53,6 +59,7 @@ public class LostFoundController {
 
     // 분실물 수정
     @PatchMapping("/lost/{id}")
+    @Operation(summary = "분실물 수정", description = "작성자 또는 익명 비밀번호 검증 후 분실물 정보를 일부 수정합니다.")
     public ResponseEntity<?> updateLostItem(
             @PathVariable Long id,
             @RequestBody LostItemUpdateRequest request) {
@@ -79,6 +86,7 @@ public class LostFoundController {
 
     // 분실물 삭제
     @DeleteMapping("/lost/{id}")
+    @Operation(summary = "분실물 삭제", description = "작성자 또는 익명 비밀번호 검증 후 분실물을 삭제합니다.")
     public ResponseEntity<String> deleteLostItem(
             @PathVariable Long id,
             @RequestBody Map<String, String> payload) {
