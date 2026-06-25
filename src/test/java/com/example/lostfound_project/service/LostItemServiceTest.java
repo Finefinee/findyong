@@ -1,5 +1,8 @@
 package com.example.lostfound_project.service;
 
+import com.example.lostfound_project.dto.LostItemCreateRequest;
+import com.example.lostfound_project.dto.LostItemResponse;
+import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.model.LostItem;
 import com.example.lostfound_project.repository.LostItemRepository;
 import org.junit.jupiter.api.Test;
@@ -8,11 +11,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.RecordComponent;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,25 +36,149 @@ class LostItemServiceTest {
 
     @Test
     void anonymousLostItemRequiresPassword() {
-        LostItem item = new LostItem();
-        item.setWriter("익명");
+        LostItemCreateRequest request = new LostItemCreateRequest();
+        request.setItemName("지갑");
+        request.setLocation("도서관");
+        request.setWriter("익명");
 
-        assertThatThrownBy(() -> lostItemService.createLostItem(item))
+        assertThatThrownBy(() -> lostItemService.createLostItem(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("익명 글은 비밀번호를 설정해야 합니다.");
 
-        verify(lostItemRepository, never()).save(item);
+        verify(lostItemRepository, never()).save(any(LostItem.class));
+    }
+
+    @Test
+    void createLostItemRequiresItemName() {
+        LostItemCreateRequest request = new LostItemCreateRequest();
+        request.setLocation("도서관");
+        request.setWriter("user1");
+
+        assertThatThrownBy(() -> lostItemService.createLostItem(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("분실물 이름은 필수입니다.");
+
+        verify(lostItemRepository, never()).save(any(LostItem.class));
     }
 
     @Test
     void createLostItemSavesValidItem() {
+        LocalDateTime lostTime = LocalDateTime.of(2026, 6, 24, 10, 0);
+        LostItemCreateRequest request = new LostItemCreateRequest();
+        request.setItemName("지갑");
+        request.setDescription("검은색 지갑");
+        request.setLocation("도서관");
+        request.setLostTime(lostTime);
+        request.setWriter("user1");
+
+        when(lostItemRepository.save(any(LostItem.class))).thenAnswer(invocation -> {
+            LostItem item = invocation.getArgument(0);
+            item.setId(1L);
+            return item;
+        });
+
+        LostItemResponse saved = lostItemService.createLostItem(request);
+
+        assertThat(saved.id()).isEqualTo(1L);
+        assertThat(saved.itemName()).isEqualTo("지갑");
+        assertThat(saved.description()).isEqualTo("검은색 지갑");
+        assertThat(saved.location()).isEqualTo("도서관");
+        assertThat(saved.lostTime()).isEqualTo(lostTime);
+        assertThat(saved.writer()).isEqualTo("user1");
+        verify(lostItemRepository).save(any(LostItem.class));
+    }
+
+    @Test
+    void lostItemResponseDoesNotExposePassword() {
+        List<String> fields = Arrays.stream(LostItemResponse.class.getRecordComponents())
+                .map(RecordComponent::getName)
+                .toList();
+
+        assertThat(fields).doesNotContain("password");
+    }
+
+    @Test
+    void getLostItemsSearchesAndReturnsResponses() {
+        LostItem item = new LostItem();
+        item.setId(1L);
+        item.setItemName("지갑");
+        item.setDescription("검은색 지갑");
+        item.setLocation("도서관");
+        item.setWriter("익명");
+        item.setPassword("1234");
+        when(lostItemRepository.searchLostItems("지갑", "도서관")).thenReturn(List.of(item));
+
+        List<LostItemResponse> responses = lostItemService.getLostItems(" 지갑 ", " 도서관 ");
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).itemName()).isEqualTo("지갑");
+        verify(lostItemRepository).searchLostItems("지갑", "도서관");
+    }
+
+    @Test
+    void getLostItemReturnsResponseWhenItemExists() {
+        LostItem item = new LostItem();
+        item.setId(1L);
+        item.setItemName("지갑");
+        item.setLocation("도서관");
+        item.setWriter("user1");
+        when(lostItemRepository.findById(1L)).thenReturn(Optional.of(item));
+
+        Optional<LostItemResponse> response = lostItemService.getLostItem(1L);
+
+        assertThat(response).isPresent();
+        assertThat(response.get().id()).isEqualTo(1L);
+        assertThat(response.get().itemName()).isEqualTo("지갑");
+    }
+
+    @Test
+    void updateLostItemRequiresUpdateContent() {
+        LostItemUpdateRequest request = new LostItemUpdateRequest();
+        request.setUserId("user1");
+
+        assertThatThrownBy(() -> lostItemService.updateLostItem(1L, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("수정할 내용이 필요합니다.");
+
+        verify(lostItemRepository, never()).save(any(LostItem.class));
+    }
+
+    @Test
+    void updateLostItemRejectsWrongWriter() {
         LostItem item = new LostItem();
         item.setWriter("user1");
+        when(lostItemRepository.findById(1L)).thenReturn(Optional.of(item));
+
+        LostItemUpdateRequest request = new LostItemUpdateRequest();
+        request.setItemName("수정된 지갑");
+        request.setUserId("user2");
+
+        LostItemService.UpdateResult result = lostItemService.updateLostItem(1L, request);
+
+        assertThat(result.status()).isEqualTo(LostItemService.UpdateStatus.NOT_WRITER);
+        verify(lostItemRepository, never()).save(any(LostItem.class));
+    }
+
+    @Test
+    void updateLostItemUpdatesAllowedFields() {
+        LostItem item = new LostItem();
+        item.setId(1L);
+        item.setItemName("지갑");
+        item.setLocation("도서관");
+        item.setWriter("user1");
+        when(lostItemRepository.findById(1L)).thenReturn(Optional.of(item));
         when(lostItemRepository.save(item)).thenReturn(item);
 
-        LostItem saved = lostItemService.createLostItem(item);
+        LostItemUpdateRequest request = new LostItemUpdateRequest();
+        request.setItemName("수정된 지갑");
+        request.setLocation("학생회관");
+        request.setUserId("user1");
 
-        assertThat(saved).isSameAs(item);
+        LostItemService.UpdateResult result = lostItemService.updateLostItem(1L, request);
+
+        assertThat(result.status()).isEqualTo(LostItemService.UpdateStatus.SUCCESS);
+        assertThat(result.item().itemName()).isEqualTo("수정된 지갑");
+        assertThat(result.item().location()).isEqualTo("학생회관");
         verify(lostItemRepository).save(item);
     }
 

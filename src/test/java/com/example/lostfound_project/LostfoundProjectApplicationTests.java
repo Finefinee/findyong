@@ -1,6 +1,7 @@
 package com.example.lostfound_project;
 
 import com.example.lostfound_project.repository.LostItemRepository;
+import com.example.lostfound_project.repository.NoticeRepository;
 import com.example.lostfound_project.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,9 @@ class LostfoundProjectApplicationTests {
 
     @MockitoBean
     private LostItemRepository lostItemRepository;
+
+    @MockitoBean
+    private NoticeRepository noticeRepository;
 
     @Test
     void contextLoads() {
