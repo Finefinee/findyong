@@ -27,6 +27,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/register", "/api/login", "/api/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/lost", "/api/lost/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users", "/api/users/**").permitAll()
                         .requestMatchers("/api/notices/**").permitAll()
                         .anyRequest().authenticated()
                 )
