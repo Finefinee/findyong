@@ -6,6 +6,7 @@ import com.example.lostfound_project.dto.LostItemResponse;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.service.LostItemService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ public class LostFoundController {
     // 분실물 등록
     @PostMapping("/lost")
     @Operation(summary = "분실물 등록", description = "로그인한 사용자의 JWT 쿠키를 기준으로 작성자를 저장합니다.")
+    @SecurityRequirement(name = "accessTokenCookie")
     public ResponseEntity<?> createLostItem(
             @RequestBody LostItemCreateRequest request,
             Principal principal) {
@@ -62,6 +64,7 @@ public class LostFoundController {
     // 분실물 수정
     @PatchMapping("/lost/{id}")
     @Operation(summary = "분실물 수정", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 분실물 정보를 수정합니다.")
+    @SecurityRequirement(name = "accessTokenCookie")
     public ResponseEntity<?> updateLostItem(
             @PathVariable Long id,
             @RequestBody LostItemUpdateRequest request,
@@ -90,6 +93,7 @@ public class LostFoundController {
     // 분실물 삭제
     @DeleteMapping("/lost/{id}")
     @Operation(summary = "분실물 삭제", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 분실물을 삭제합니다.")
+    @SecurityRequirement(name = "accessTokenCookie")
     public ResponseEntity<String> deleteLostItem(
             @PathVariable Long id,
             Principal principal) {

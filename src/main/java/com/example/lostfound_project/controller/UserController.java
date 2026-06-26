@@ -1,9 +1,15 @@
 package com.example.lostfound_project.controller;
 
+import com.example.lostfound_project.dto.LoginRequest;
+import com.example.lostfound_project.dto.LoginResponse;
+import com.example.lostfound_project.dto.RegisterRequest;
 import com.example.lostfound_project.model.User;
 import com.example.lostfound_project.security.JwtAuthenticationFilter;
 import com.example.lostfound_project.security.JwtTokenProvider;
 import com.example.lostfound_project.service.UserService;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
@@ -11,8 +17,6 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -31,8 +35,8 @@ public class UserController {
     // 회원가입
     @PostMapping("/register")
     @Operation(summary = "회원가입", description = "아이디 중복 확인 후 비밀번호를 암호화하여 사용자를 등록합니다.")
-    public ResponseEntity<?> register(@RequestBody User user) {
-        if (!userService.register(user)) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        if (!userService.register(request.toEntity())) {
             return ResponseEntity.badRequest().body("이미 존재하는 아이디입니다.");
         }
 
@@ -41,20 +45,27 @@ public class UserController {
 
     // 로그인
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "아이디와 비밀번호를 검증하고 HttpOnly JWT 쿠키를 발급합니다.")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-        String userId = request.get("userId");
-        String password = request.get("password");
-
-        Optional<User> user = userService.login(userId, password);
+    @Operation(
+            summary = "로그인",
+            description = "아이디와 비밀번호를 검증하고 Set-Cookie 헤더로 accessToken HttpOnly JWT 쿠키를 발급합니다.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = LoginRequest.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "userId": "user1",
+                                      "password": "password"
+                                    }
+                                    """)
+                    )
+            )
+    )
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        Optional<User> user = userService.login(request.getUserId(), request.getPassword());
         if (user.isEmpty()) {
             return ResponseEntity.status(401).body("아이디 또는 비밀번호가 일치하지 않습니다.");
         }
-
-        // JSON 응답
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "로그인 성공");
-        response.put("userId", user.get().getUserId());
 
         ResponseCookie cookie = ResponseCookie.from(
                         JwtAuthenticationFilter.ACCESS_TOKEN_COOKIE_NAME,
@@ -68,11 +79,11 @@ public class UserController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(response);
+                .body(new LoginResponse("로그인 성공", user.get().getUserId()));
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "로그아웃", description = "HttpOnly JWT 쿠키를 제거합니다.")
+    @Operation(summary = "로그아웃", description = "accessToken HttpOnly JWT 쿠키를 만료시켜 로그아웃 처리합니다.")
     public ResponseEntity<?> logout() {
         ResponseCookie cookie = ResponseCookie.from(JwtAuthenticationFilter.ACCESS_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
