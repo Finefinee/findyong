@@ -1,8 +1,9 @@
 package com.example.lostfound_project.controller;
 
+import com.example.lostfound_project.dto.CommentResponse;
 import com.example.lostfound_project.dto.LostItemResponse;
-import com.example.lostfound_project.model.LostItemStatus;
 import com.example.lostfound_project.security.JwtAuthenticationFilter;
+import com.example.lostfound_project.service.CommentService;
 import com.example.lostfound_project.service.LostItemService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ class LostFoundControllerTest {
     private LostItemService lostItemService;
 
     @MockitoBean
+    private CommentService commentService;
+
+    @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
@@ -47,8 +51,7 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "user1",
-                LostItemStatus.OWNER_NOT_FOUND
+                "user1"
         );
         when(lostItemService.createLostItem(any(), eq("user1"))).thenReturn(response);
 
@@ -77,8 +80,7 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "user1",
-                LostItemStatus.OWNER_NOT_FOUND
+                "익명"
         );
         when(lostItemService.getLostItems(eq("지갑"), eq("도서관"))).thenReturn(List.of(response));
 
@@ -99,8 +101,7 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "user1",
-                LostItemStatus.OWNER_NOT_FOUND
+                "익명"
         );
         when(lostItemService.getLostItem(1L)).thenReturn(Optional.of(response));
 
@@ -119,8 +120,7 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "학생회관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "user1",
-                LostItemStatus.OWNER_NOT_FOUND
+                "user1"
         );
         when(lostItemService.updateLostItem(eq(1L), any(), eq("user1")))
                 .thenReturn(LostItemService.UpdateResult.success(response));
@@ -141,39 +141,38 @@ class LostFoundControllerTest {
     }
 
     @Test
-    void updateLostItemStatusReturnsUpdatedStatus() throws Exception {
-        LostItemResponse response = new LostItemResponse(
+    void createCommentReturnsComment() throws Exception {
+        CommentResponse response = new CommentResponse(
                 1L,
-                "지갑",
-                "검은색 지갑",
-                "도서관",
-                LocalDateTime.of(2026, 6, 24, 10, 0),
+                10L,
+                "확인했습니다.",
                 "user1",
-                LostItemStatus.OWNER_FOUND
+                LocalDateTime.of(2026, 6, 26, 12, 0)
         );
-        when(lostItemService.updateLostItemStatus(eq(1L), any(), eq("user1")))
-                .thenReturn(LostItemService.UpdateResult.success(response));
+        when(commentService.createComment(eq(10L), any(), eq("user1")))
+                .thenReturn(CommentService.CreateResult.success(response));
 
-        mockMvc.perform(patch("/api/lost/1/status")
+        mockMvc.perform(post("/api/lost/10/comments")
                         .principal(() -> "user1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "status": "OWNER_FOUND"
+                                  "content": "확인했습니다."
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("OWNER_FOUND"));
+                .andExpect(jsonPath("$.content").value("확인했습니다."))
+                .andExpect(jsonPath("$.writer").value("user1"));
     }
 
     @Test
-    void deleteLostItemReturnsMessage() throws Exception {
-        when(lostItemService.deleteLostItem(1L, "user1"))
-                .thenReturn(LostItemService.DeleteResult.SUCCESS);
+    void deleteCommentReturnsMessage() throws Exception {
+        when(commentService.deleteComment(10L, 1L, "user1"))
+                .thenReturn(CommentService.DeleteResult.SUCCESS);
 
-        mockMvc.perform(delete("/api/lost/1")
+        mockMvc.perform(delete("/api/lost/10/comments/1")
                         .principal(() -> "user1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("삭제되었습니다."));
+                .andExpect(jsonPath("$.message").value("댓글이 삭제되었습니다."));
     }
 }

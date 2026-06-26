@@ -19,5 +19,6 @@ public class Comment {
 
     private Long itemId;
     private String content;
+    private String writer;
     private LocalDateTime createdAt;
 }

@@ -4,6 +4,8 @@ import com.example.lostfound_project.dto.LoginRequest;
 import com.example.lostfound_project.dto.LoginResponse;
 import com.example.lostfound_project.dto.MessageResponse;
 import com.example.lostfound_project.dto.RegisterRequest;
+import com.example.lostfound_project.dto.UserResponse;
+import com.example.lostfound_project.dto.UserUpdateRequest;
 import com.example.lostfound_project.model.User;
 import com.example.lostfound_project.security.JwtAuthenticationFilter;
 import com.example.lostfound_project.security.JwtTokenProvider;
@@ -14,10 +16,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -97,5 +102,60 @@ public class UserController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(new MessageResponse("로그아웃 성공"));
+    }
+
+    @GetMapping("/users")
+    @Operation(summary = "회원 목록 조회", description = "회원 목록을 조회합니다. 비밀번호는 응답에 포함하지 않습니다.")
+    public List<UserResponse> getUsers() {
+        return userService.getUsers();
+    }
+
+    @GetMapping("/users/{id}")
+    @Operation(summary = "회원 상세 조회", description = "회원 ID로 단일 회원 정보를 조회합니다. 비밀번호는 응답에 포함하지 않습니다.")
+    public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
+        return userService.getUser(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/users/{id}")
+    @Operation(summary = "회원 수정", description = "JWT 쿠키의 사용자 ID가 대상 회원과 일치할 때만 회원 정보를 수정합니다.")
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long id,
+            @RequestBody UserUpdateRequest request,
+            Principal principal) {
+        try {
+            UserService.UpdateResult result = userService.updateUser(id, request, principal.getName());
+
+            if (result.status() == UserService.UpdateStatus.NOT_FOUND) {
+                return ResponseEntity.notFound().build();
+            }
+
+            if (result.status() != UserService.UpdateStatus.SUCCESS) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new MessageResponse(result.message()));
+            }
+
+            return ResponseEntity.ok(result.user());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/users/{id}")
+    @Operation(summary = "회원 삭제", description = "JWT 쿠키의 사용자 ID가 대상 회원과 일치할 때만 회원을 삭제합니다.")
+    public ResponseEntity<MessageResponse> deleteUser(
+            @PathVariable Long id,
+            Principal principal) {
+        UserService.DeleteResult result = userService.deleteUser(id, principal.getName());
+
+        if (result == UserService.DeleteResult.NOT_FOUND) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (result != UserService.DeleteResult.SUCCESS) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new MessageResponse(result.getMessage()));
+        }
+
+        return ResponseEntity.ok(new MessageResponse(result.getMessage()));
     }
 }
