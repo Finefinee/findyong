@@ -23,5 +23,7 @@ public class LostItem {
     private LocalDateTime lostTime;
     private String writer;
     private String password;
-}
 
+    @Enumerated(EnumType.STRING)
+    private LostItemStatus status = LostItemStatus.OWNER_NOT_FOUND;
+}

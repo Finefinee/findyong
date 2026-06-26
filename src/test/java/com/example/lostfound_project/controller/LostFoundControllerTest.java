@@ -1,6 +1,7 @@
 package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.dto.LostItemResponse;
+import com.example.lostfound_project.model.LostItemStatus;
 import com.example.lostfound_project.security.JwtAuthenticationFilter;
 import com.example.lostfound_project.service.LostItemService;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,8 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "user1"
+                "user1",
+                LostItemStatus.OWNER_NOT_FOUND
         );
         when(lostItemService.createLostItem(any(), eq("user1"))).thenReturn(response);
 
@@ -75,7 +77,8 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "익명"
+                "user1",
+                LostItemStatus.OWNER_NOT_FOUND
         );
         when(lostItemService.getLostItems(eq("지갑"), eq("도서관"))).thenReturn(List.of(response));
 
@@ -96,7 +99,8 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "익명"
+                "user1",
+                LostItemStatus.OWNER_NOT_FOUND
         );
         when(lostItemService.getLostItem(1L)).thenReturn(Optional.of(response));
 
@@ -115,7 +119,8 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "학생회관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "user1"
+                "user1",
+                LostItemStatus.OWNER_NOT_FOUND
         );
         when(lostItemService.updateLostItem(eq(1L), any(), eq("user1")))
                 .thenReturn(LostItemService.UpdateResult.success(response));
@@ -133,6 +138,32 @@ class LostFoundControllerTest {
                 .andExpect(jsonPath("$.itemName").value("수정된 지갑"))
                 .andExpect(jsonPath("$.location").value("학생회관"))
                 .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    @Test
+    void updateLostItemStatusReturnsUpdatedStatus() throws Exception {
+        LostItemResponse response = new LostItemResponse(
+                1L,
+                "지갑",
+                "검은색 지갑",
+                "도서관",
+                LocalDateTime.of(2026, 6, 24, 10, 0),
+                "user1",
+                LostItemStatus.OWNER_FOUND
+        );
+        when(lostItemService.updateLostItemStatus(eq(1L), any(), eq("user1")))
+                .thenReturn(LostItemService.UpdateResult.success(response));
+
+        mockMvc.perform(patch("/api/lost/1/status")
+                        .principal(() -> "user1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "OWNER_FOUND"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OWNER_FOUND"));
     }
 
     @Test

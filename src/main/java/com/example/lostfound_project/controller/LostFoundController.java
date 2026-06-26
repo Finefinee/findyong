@@ -3,6 +3,7 @@ package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.dto.LostItemCreateRequest;
 import com.example.lostfound_project.dto.LostItemResponse;
+import com.example.lostfound_project.dto.LostItemStatusUpdateRequest;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.dto.MessageResponse;
 import com.example.lostfound_project.service.LostItemService;
@@ -91,7 +92,35 @@ public class LostFoundController {
         }
     }
 
-    // 분실물 삭제
+    // 분실물 주인 확인 상태 변경
+    @PatchMapping("/lost/{id}/status")
+    @Operation(summary = "분실물 주인 확인 상태 변경", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 주인을 찾았는지 여부를 변경합니다.")
+    @SecurityRequirement(name = "accessTokenCookie")
+    public ResponseEntity<?> updateLostItemStatus(
+            @PathVariable Long id,
+            @RequestBody LostItemStatusUpdateRequest request,
+            Principal principal) {
+        try {
+            LostItemService.UpdateResult result = lostItemService.updateLostItemStatus(id, request, principal.getName());
+
+            if (result.status() == LostItemService.UpdateStatus.NOT_FOUND) {
+                return ResponseEntity.notFound().build();
+            }
+
+            if (result.status() != LostItemService.UpdateStatus.SUCCESS) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(new MessageResponse(result.message()));
+            }
+
+            return ResponseEntity.ok(result.item());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse(e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/lost/{id}")
     @Operation(summary = "분실물 삭제", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 분실물을 삭제합니다.")
     @SecurityRequirement(name = "accessTokenCookie")

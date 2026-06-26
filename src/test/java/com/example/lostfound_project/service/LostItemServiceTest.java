@@ -2,8 +2,10 @@ package com.example.lostfound_project.service;
 
 import com.example.lostfound_project.dto.LostItemCreateRequest;
 import com.example.lostfound_project.dto.LostItemResponse;
+import com.example.lostfound_project.dto.LostItemStatusUpdateRequest;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.model.LostItem;
+import com.example.lostfound_project.model.LostItemStatus;
 import com.example.lostfound_project.repository.LostItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,6 +82,7 @@ class LostItemServiceTest {
         assertThat(saved.location()).isEqualTo("도서관");
         assertThat(saved.lostTime()).isEqualTo(lostTime);
         assertThat(saved.writer()).isEqualTo("user1");
+        assertThat(saved.status()).isEqualTo(LostItemStatus.OWNER_NOT_FOUND);
         verify(lostItemRepository).save(any(LostItem.class));
     }
 
@@ -171,6 +174,37 @@ class LostItemServiceTest {
         assertThat(result.status()).isEqualTo(LostItemService.UpdateStatus.SUCCESS);
         assertThat(result.item().itemName()).isEqualTo("수정된 지갑");
         assertThat(result.item().location()).isEqualTo("학생회관");
+        verify(lostItemRepository).save(item);
+    }
+
+    @Test
+    void updateLostItemStatusRequiresStatus() {
+        LostItemStatusUpdateRequest request = new LostItemStatusUpdateRequest();
+
+        assertThatThrownBy(() -> lostItemService.updateLostItemStatus(1L, request, "user1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("분실물 상태는 필수입니다.");
+
+        verify(lostItemRepository, never()).save(any(LostItem.class));
+    }
+
+    @Test
+    void updateLostItemStatusUpdatesStatusWhenWriterMatches() {
+        LostItem item = new LostItem();
+        item.setId(1L);
+        item.setItemName("지갑");
+        item.setLocation("도서관");
+        item.setWriter("user1");
+        when(lostItemRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(lostItemRepository.save(item)).thenReturn(item);
+
+        LostItemStatusUpdateRequest request = new LostItemStatusUpdateRequest();
+        request.setStatus(LostItemStatus.OWNER_FOUND);
+
+        LostItemService.UpdateResult result = lostItemService.updateLostItemStatus(1L, request, "user1");
+
+        assertThat(result.status()).isEqualTo(LostItemService.UpdateStatus.SUCCESS);
+        assertThat(result.item().status()).isEqualTo(LostItemStatus.OWNER_FOUND);
         verify(lostItemRepository).save(item);
     }
 

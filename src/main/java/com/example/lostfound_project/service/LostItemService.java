@@ -2,6 +2,7 @@ package com.example.lostfound_project.service;
 
 import com.example.lostfound_project.dto.LostItemCreateRequest;
 import com.example.lostfound_project.dto.LostItemResponse;
+import com.example.lostfound_project.dto.LostItemStatusUpdateRequest;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.model.LostItem;
 import com.example.lostfound_project.repository.LostItemRepository;
@@ -53,6 +54,23 @@ public class LostItemService {
         }
 
         applyUpdate(item, request);
+        LostItem saved = lostItemRepository.save(item);
+        return UpdateResult.success(LostItemResponse.from(saved));
+    }
+
+    public UpdateResult updateLostItemStatus(Long id, LostItemStatusUpdateRequest request, String userId) {
+        validateStatusUpdateRequest(request);
+
+        LostItem item = lostItemRepository.findById(id).orElse(null);
+        if (item == null) {
+            return UpdateResult.notFound();
+        }
+
+        if (!isWriter(item, userId)) {
+            return UpdateResult.notWriter();
+        }
+
+        item.setStatus(request.getStatus());
         LostItem saved = lostItemRepository.save(item);
         return UpdateResult.success(LostItemResponse.from(saved));
     }
@@ -134,6 +152,16 @@ public class LostItemService {
 
         if (request.getLocation() != null && isBlank(request.getLocation())) {
             throw new IllegalArgumentException("분실 장소는 비워둘 수 없습니다.");
+        }
+    }
+
+    private void validateStatusUpdateRequest(LostItemStatusUpdateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("요청 본문이 필요합니다.");
+        }
+
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("분실물 상태는 필수입니다.");
         }
     }
 

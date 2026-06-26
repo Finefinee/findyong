@@ -1,6 +1,7 @@
 package com.example.lostfound_project.dto;
 
 import com.example.lostfound_project.model.LostItem;
+import com.example.lostfound_project.model.LostItemStatus;
 
 import java.time.LocalDateTime;
 
@@ -10,7 +11,8 @@ public record LostItemResponse(
         String description,
         String location,
         LocalDateTime lostTime,
-        String writer
+        String writer,
+        LostItemStatus status
 ) {
 
     public static LostItemResponse from(LostItem item) {
@@ -20,7 +22,8 @@ public record LostItemResponse(
                 item.getDescription(),
                 item.getLocation(),
                 item.getLostTime(),
-                item.getWriter()
+                item.getWriter(),
+                item.getStatus()
         );
     }
 }
