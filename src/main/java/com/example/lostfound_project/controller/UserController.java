@@ -1,9 +1,13 @@
 package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.model.User;
+import com.example.lostfound_project.security.JwtAuthenticationFilter;
+import com.example.lostfound_project.security.JwtTokenProvider;
 import com.example.lostfound_project.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +21,11 @@ import java.util.Optional;
 public class UserController {
 
     private final UserService userService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtTokenProvider jwtTokenProvider) {
         this.userService = userService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     // 회원가입
@@ -35,7 +41,7 @@ public class UserController {
 
     // 로그인
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "아이디와 비밀번호를 검증하고 로그인 결과를 반환합니다.")
+    @Operation(summary = "로그인", description = "아이디와 비밀번호를 검증하고 HttpOnly JWT 쿠키를 발급합니다.")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String userId = request.get("userId");
         String password = request.get("password");
@@ -50,6 +56,34 @@ public class UserController {
         response.put("message", "로그인 성공");
         response.put("userId", user.get().getUserId());
 
-        return ResponseEntity.ok(response);
+        ResponseCookie cookie = ResponseCookie.from(
+                        JwtAuthenticationFilter.ACCESS_TOKEN_COOKIE_NAME,
+                        jwtTokenProvider.createToken(user.get().getUserId()))
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(jwtTokenProvider.getExpirationMillis() / 1000)
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(response);
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "HttpOnly JWT 쿠키를 제거합니다.")
+    public ResponseEntity<?> logout() {
+        ResponseCookie cookie = ResponseCookie.from(JwtAuthenticationFilter.ACCESS_TOKEN_COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body("로그아웃 성공");
     }
 }

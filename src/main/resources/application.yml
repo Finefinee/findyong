@@ -26,3 +26,7 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+jwt:
+  secret: ${JWT_SECRET:lostfound-local-development-secret-key}
+  expiration-millis: 3600000

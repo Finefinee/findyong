@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "분실물 수정 요청")
+@Schema(description = "분실물 수정 요청. 수정 권한은 JWT 쿠키의 사용자 ID로 확인합니다.")
 public class LostItemUpdateRequest {
 
     @Schema(description = "수정할 분실물 이름", example = "검은색 카드지갑")
@@ -25,9 +25,4 @@ public class LostItemUpdateRequest {
     @Schema(description = "수정할 분실 시간", example = "2026-06-24T10:00:00")
     private LocalDateTime lostTime;
 
-    @Schema(description = "작성자 검증용 사용자 ID", example = "user1")
-    private String userId;
-
-    @Schema(description = "익명 글 검증용 비밀번호", example = "1234")
-    private String password;
 }

@@ -1,6 +1,7 @@
 package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.dto.NoticeResponse;
+import com.example.lostfound_project.security.JwtAuthenticationFilter;
 import com.example.lostfound_project.service.NoticeService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class NoticeControllerTest {
 
     @MockitoBean
     private NoticeService noticeService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     void createNoticeReturnsCreatedNotice() throws Exception {

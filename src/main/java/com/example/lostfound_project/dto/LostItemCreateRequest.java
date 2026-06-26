@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "분실물 등록 요청")
+@Schema(description = "분실물 등록 요청. 작성자는 JWT 쿠키에서 서버가 자동으로 설정합니다.")
 public class LostItemCreateRequest {
 
     @Schema(description = "분실물 이름", example = "검은색 지갑")
@@ -26,20 +26,13 @@ public class LostItemCreateRequest {
     @Schema(description = "분실 시간", example = "2026-06-24T10:00:00")
     private LocalDateTime lostTime;
 
-    @Schema(description = "작성자 ID 또는 익명", example = "익명")
-    private String writer;
-
-    @Schema(description = "익명 글 수정/삭제용 비밀번호", example = "1234")
-    private String password;
-
-    public LostItem toEntity() {
+    public LostItem toEntity(String writer) {
         LostItem item = new LostItem();
         item.setItemName(itemName);
         item.setDescription(description);
         item.setLocation(location);
         item.setLostTime(lostTime);
         item.setWriter(writer);
-        item.setPassword(password);
         return item;
     }
 }

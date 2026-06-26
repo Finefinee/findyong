@@ -11,12 +11,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@Tag(name = "Lost Item", description = "분실물 등록, 조회, 수정, 삭제 API")
+@Tag(name = "Lost Item", description = "JWT 인증 기반 분실물 등록, 조회, 수정, 삭제 API")
 public class LostFoundController {
 
     private final LostItemService lostItemService;
@@ -27,10 +27,12 @@ public class LostFoundController {
 
     // 분실물 등록
     @PostMapping("/lost")
-    @Operation(summary = "분실물 등록", description = "분실물 정보를 등록합니다. 익명 작성자는 삭제/수정을 위한 비밀번호가 필요합니다.")
-    public ResponseEntity<?> createLostItem(@RequestBody LostItemCreateRequest request) {
+    @Operation(summary = "분실물 등록", description = "로그인한 사용자의 JWT 쿠키를 기준으로 작성자를 저장합니다.")
+    public ResponseEntity<?> createLostItem(
+            @RequestBody LostItemCreateRequest request,
+            Principal principal) {
         try {
-            LostItemResponse response = lostItemService.createLostItem(request);
+            LostItemResponse response = lostItemService.createLostItem(request, principal.getName());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity
@@ -59,12 +61,13 @@ public class LostFoundController {
 
     // 분실물 수정
     @PatchMapping("/lost/{id}")
-    @Operation(summary = "분실물 수정", description = "작성자 또는 익명 비밀번호 검증 후 분실물 정보를 일부 수정합니다.")
+    @Operation(summary = "분실물 수정", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 분실물 정보를 수정합니다.")
     public ResponseEntity<?> updateLostItem(
             @PathVariable Long id,
-            @RequestBody LostItemUpdateRequest request) {
+            @RequestBody LostItemUpdateRequest request,
+            Principal principal) {
         try {
-            LostItemService.UpdateResult result = lostItemService.updateLostItem(id, request);
+            LostItemService.UpdateResult result = lostItemService.updateLostItem(id, request, principal.getName());
 
             if (result.status() == LostItemService.UpdateStatus.NOT_FOUND) {
                 return ResponseEntity.notFound().build();
@@ -86,12 +89,12 @@ public class LostFoundController {
 
     // 분실물 삭제
     @DeleteMapping("/lost/{id}")
-    @Operation(summary = "분실물 삭제", description = "작성자 또는 익명 비밀번호 검증 후 분실물을 삭제합니다.")
+    @Operation(summary = "분실물 삭제", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 분실물을 삭제합니다.")
     public ResponseEntity<String> deleteLostItem(
             @PathVariable Long id,
-            @RequestBody Map<String, String> payload) {
+            Principal principal) {
 
-        LostItemService.DeleteResult result = lostItemService.deleteLostItem(id, payload);
+        LostItemService.DeleteResult result = lostItemService.deleteLostItem(id, principal.getName());
 
         if (result == LostItemService.DeleteResult.NOT_FOUND) {
             return ResponseEntity.notFound().build();

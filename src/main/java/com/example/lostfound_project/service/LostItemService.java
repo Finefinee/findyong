@@ -7,9 +7,7 @@ import com.example.lostfound_project.model.LostItem;
 import com.example.lostfound_project.repository.LostItemRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -17,18 +15,16 @@ import java.util.stream.Collectors;
 @Service
 public class LostItemService {
 
-    private static final String ANONYMOUS_WRITER = "익명";
-
     private final LostItemRepository lostItemRepository;
 
     public LostItemService(LostItemRepository lostItemRepository) {
         this.lostItemRepository = lostItemRepository;
     }
 
-    public LostItemResponse createLostItem(LostItemCreateRequest request) {
+    public LostItemResponse createLostItem(LostItemCreateRequest request, String userId) {
         validateCreateRequest(request);
 
-        LostItem saved = lostItemRepository.save(request.toEntity());
+        LostItem saved = lostItemRepository.save(request.toEntity(userId));
         return LostItemResponse.from(saved);
     }
 
@@ -44,7 +40,7 @@ public class LostItemService {
                 .map(LostItemResponse::from);
     }
 
-    public UpdateResult updateLostItem(Long id, LostItemUpdateRequest request) {
+    public UpdateResult updateLostItem(Long id, LostItemUpdateRequest request, String userId) {
         validateUpdateRequest(request);
 
         LostItem item = lostItemRepository.findById(id).orElse(null);
@@ -52,12 +48,7 @@ public class LostItemService {
             return UpdateResult.notFound();
         }
 
-        DeleteResult permissionResult = validatePermission(item, request.getUserId(), request.getPassword());
-        if (permissionResult == DeleteResult.INVALID_PASSWORD) {
-            return UpdateResult.invalidPassword();
-        }
-
-        if (permissionResult == DeleteResult.NOT_WRITER) {
+        if (!isWriter(item, userId)) {
             return UpdateResult.notWriter();
         }
 
@@ -66,29 +57,18 @@ public class LostItemService {
         return UpdateResult.success(LostItemResponse.from(saved));
     }
 
-    public DeleteResult deleteLostItem(Long id, Map<String, String> payload) {
+    public DeleteResult deleteLostItem(Long id, String userId) {
         LostItem item = lostItemRepository.findById(id).orElse(null);
         if (item == null) {
             return DeleteResult.NOT_FOUND;
         }
 
-        Map<String, String> request = payload == null ? Collections.emptyMap() : payload;
-
-        DeleteResult permissionResult = validatePermission(item, request.get("userId"), request.get("password"));
-        if (permissionResult != DeleteResult.SUCCESS) {
-            return permissionResult;
+        if (!isWriter(item, userId)) {
+            return DeleteResult.NOT_WRITER;
         }
 
         lostItemRepository.deleteById(id);
         return DeleteResult.SUCCESS;
-    }
-
-    private boolean isAnonymous(LostItem item) {
-        return ANONYMOUS_WRITER.equals(item.getWriter());
-    }
-
-    private boolean isAnonymous(LostItemCreateRequest request) {
-        return ANONYMOUS_WRITER.equals(request.getWriter());
     }
 
     private boolean isBlank(String value) {
@@ -99,19 +79,8 @@ public class LostItemService {
         return isBlank(value) ? null : value.trim();
     }
 
-    private DeleteResult validatePermission(LostItem item, String userId, String password) {
-        if (isAnonymous(item)) {
-            if (!Objects.equals(item.getPassword(), password)) {
-                return DeleteResult.INVALID_PASSWORD;
-            }
-            return DeleteResult.SUCCESS;
-        }
-
-        if (!Objects.equals(item.getWriter(), userId)) {
-            return DeleteResult.NOT_WRITER;
-        }
-
-        return DeleteResult.SUCCESS;
+    private boolean isWriter(LostItem item, String userId) {
+        return Objects.equals(item.getWriter(), userId);
     }
 
     private void applyUpdate(LostItem item, LostItemUpdateRequest request) {
@@ -145,13 +114,6 @@ public class LostItemService {
             throw new IllegalArgumentException("분실 장소는 필수입니다.");
         }
 
-        if (isBlank(request.getWriter())) {
-            throw new IllegalArgumentException("작성자는 필수입니다.");
-        }
-
-        if (isAnonymous(request) && isBlank(request.getPassword())) {
-            throw new IllegalArgumentException("익명 글은 비밀번호를 설정해야 합니다.");
-        }
     }
 
     private void validateUpdateRequest(LostItemUpdateRequest request) {
@@ -178,7 +140,6 @@ public class LostItemService {
     public enum DeleteResult {
         SUCCESS("삭제되었습니다."),
         NOT_FOUND(null),
-        INVALID_PASSWORD("비밀번호가 틀렸습니다."),
         NOT_WRITER("작성자만 삭제할 수 있습니다.");
 
         private final String message;
@@ -202,10 +163,6 @@ public class LostItemService {
             return new UpdateResult(UpdateStatus.NOT_FOUND, null, null);
         }
 
-        public static UpdateResult invalidPassword() {
-            return new UpdateResult(UpdateStatus.INVALID_PASSWORD, "비밀번호가 틀렸습니다.", null);
-        }
-
         public static UpdateResult notWriter() {
             return new UpdateResult(UpdateStatus.NOT_WRITER, "작성자만 수정할 수 있습니다.", null);
         }
@@ -214,7 +171,6 @@ public class LostItemService {
     public enum UpdateStatus {
         SUCCESS,
         NOT_FOUND,
-        INVALID_PASSWORD,
         NOT_WRITER
     }
 }

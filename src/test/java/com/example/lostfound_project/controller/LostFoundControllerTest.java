@@ -1,6 +1,7 @@
 package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.dto.LostItemResponse;
+import com.example.lostfound_project.security.JwtAuthenticationFilter;
 import com.example.lostfound_project.service.LostItemService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class LostFoundControllerTest {
     @MockitoBean
     private LostItemService lostItemService;
 
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Test
     void createLostItemDoesNotExposePassword() throws Exception {
         LostItemResponse response = new LostItemResponse(
@@ -41,25 +45,24 @@ class LostFoundControllerTest {
                 "검은색 지갑",
                 "도서관",
                 LocalDateTime.of(2026, 6, 24, 10, 0),
-                "익명"
+                "user1"
         );
-        when(lostItemService.createLostItem(any())).thenReturn(response);
+        when(lostItemService.createLostItem(any(), eq("user1"))).thenReturn(response);
 
         mockMvc.perform(post("/api/lost")
+                        .principal(() -> "user1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "itemName": "지갑",
                                   "description": "검은색 지갑",
                                   "location": "도서관",
-                                  "lostTime": "2026-06-24T10:00:00",
-                                  "writer": "익명",
-                                  "password": "1234"
+                                  "lostTime": "2026-06-24T10:00:00"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.itemName").value("지갑"))
-                .andExpect(jsonPath("$.writer").value("익명"))
+                .andExpect(jsonPath("$.writer").value("user1"))
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
 
@@ -113,16 +116,16 @@ class LostFoundControllerTest {
                 LocalDateTime.of(2026, 6, 24, 10, 0),
                 "user1"
         );
-        when(lostItemService.updateLostItem(eq(1L), any()))
+        when(lostItemService.updateLostItem(eq(1L), any(), eq("user1")))
                 .thenReturn(LostItemService.UpdateResult.success(response));
 
         mockMvc.perform(patch("/api/lost/1")
+                        .principal(() -> "user1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "itemName": "수정된 지갑",
-                                  "location": "학생회관",
-                                  "userId": "user1"
+                                  "location": "학생회관"
                                 }
                                 """))
                 .andExpect(status().isOk())
