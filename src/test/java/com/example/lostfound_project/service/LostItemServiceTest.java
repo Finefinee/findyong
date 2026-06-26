@@ -103,13 +103,13 @@ class LostItemServiceTest {
         item.setDescription("검은색 지갑");
         item.setLocation("도서관");
         item.setWriter("user1");
-        item.setPassword("1234");
         when(lostItemRepository.searchLostItems("지갑", "도서관")).thenReturn(List.of(item));
 
         List<LostItemResponse> responses = lostItemService.getLostItems(" 지갑 ", " 도서관 ");
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).itemName()).isEqualTo("지갑");
+        assertThat(responses.get(0).status()).isEqualTo(LostItemStatus.OWNER_NOT_FOUND);
         verify(lostItemRepository).searchLostItems("지갑", "도서관");
     }
 
@@ -127,6 +127,7 @@ class LostItemServiceTest {
         assertThat(response).isPresent();
         assertThat(response.get().id()).isEqualTo(1L);
         assertThat(response.get().itemName()).isEqualTo("지갑");
+        assertThat(response.get().status()).isEqualTo(LostItemStatus.OWNER_NOT_FOUND);
     }
 
     @Test
