@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -132,5 +133,16 @@ class LostFoundControllerTest {
                 .andExpect(jsonPath("$.itemName").value("수정된 지갑"))
                 .andExpect(jsonPath("$.location").value("학생회관"))
                 .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    @Test
+    void deleteLostItemReturnsMessage() throws Exception {
+        when(lostItemService.deleteLostItem(1L, "user1"))
+                .thenReturn(LostItemService.DeleteResult.SUCCESS);
+
+        mockMvc.perform(delete("/api/lost/1")
+                        .principal(() -> "user1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("삭제되었습니다."));
     }
 }

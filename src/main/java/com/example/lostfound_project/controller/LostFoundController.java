@@ -4,6 +4,7 @@ package com.example.lostfound_project.controller;
 import com.example.lostfound_project.dto.LostItemCreateRequest;
 import com.example.lostfound_project.dto.LostItemResponse;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
+import com.example.lostfound_project.dto.MessageResponse;
 import com.example.lostfound_project.service.LostItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -39,7 +40,7 @@ public class LostFoundController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity
                     .badRequest()
-                    .body(e.getMessage());
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
 
@@ -79,14 +80,14 @@ public class LostFoundController {
             if (result.status() != LostItemService.UpdateStatus.SUCCESS) {
                 return ResponseEntity
                         .status(HttpStatus.FORBIDDEN)
-                        .body(result.message());
+                        .body(new MessageResponse(result.message()));
             }
 
             return ResponseEntity.ok(result.item());
         } catch (IllegalArgumentException e) {
             return ResponseEntity
                     .badRequest()
-                    .body(e.getMessage());
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
 
@@ -94,7 +95,7 @@ public class LostFoundController {
     @DeleteMapping("/lost/{id}")
     @Operation(summary = "분실물 삭제", description = "JWT 쿠키의 사용자 ID가 기존 작성자와 일치할 때만 분실물을 삭제합니다.")
     @SecurityRequirement(name = "accessTokenCookie")
-    public ResponseEntity<String> deleteLostItem(
+    public ResponseEntity<MessageResponse> deleteLostItem(
             @PathVariable Long id,
             Principal principal) {
 
@@ -107,9 +108,9 @@ public class LostFoundController {
         if (result != LostItemService.DeleteResult.SUCCESS) {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(result.getMessage());
+                    .body(new MessageResponse(result.getMessage()));
         }
 
-        return ResponseEntity.ok(result.getMessage());
+        return ResponseEntity.ok(new MessageResponse(result.getMessage()));
     }
 }

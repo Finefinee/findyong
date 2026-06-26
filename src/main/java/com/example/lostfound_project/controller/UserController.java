@@ -2,6 +2,7 @@ package com.example.lostfound_project.controller;
 
 import com.example.lostfound_project.dto.LoginRequest;
 import com.example.lostfound_project.dto.LoginResponse;
+import com.example.lostfound_project.dto.MessageResponse;
 import com.example.lostfound_project.dto.RegisterRequest;
 import com.example.lostfound_project.model.User;
 import com.example.lostfound_project.security.JwtAuthenticationFilter;
@@ -37,10 +38,10 @@ public class UserController {
     @Operation(summary = "회원가입", description = "아이디 중복 확인 후 비밀번호를 암호화하여 사용자를 등록합니다.")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         if (!userService.register(request.toEntity())) {
-            return ResponseEntity.badRequest().body("이미 존재하는 아이디입니다.");
+            return ResponseEntity.badRequest().body(new MessageResponse("이미 존재하는 아이디입니다."));
         }
 
-        return ResponseEntity.ok("회원가입 성공");
+        return ResponseEntity.ok(new MessageResponse("회원가입 성공"));
     }
 
     // 로그인
@@ -64,7 +65,7 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         Optional<User> user = userService.login(request.getUserId(), request.getPassword());
         if (user.isEmpty()) {
-            return ResponseEntity.status(401).body("아이디 또는 비밀번호가 일치하지 않습니다.");
+            return ResponseEntity.status(401).body(new MessageResponse("아이디 또는 비밀번호가 일치하지 않습니다."));
         }
 
         ResponseCookie cookie = ResponseCookie.from(
@@ -95,6 +96,6 @@ public class UserController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body("로그아웃 성공");
+                .body(new MessageResponse("로그아웃 성공"));
     }
 }

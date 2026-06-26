@@ -100,11 +100,12 @@ class NoticeControllerTest {
     }
 
     @Test
-    void deleteNoticeReturnsNoContent() throws Exception {
+    void deleteNoticeReturnsMessage() throws Exception {
         when(noticeService.deleteNotice(1L)).thenReturn(true);
 
         mockMvc.perform(delete("/api/notices/1"))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("삭제되었습니다."));
     }
 
     private NoticeResponse createResponse(String title, String content, String writer, String targetLocation) {

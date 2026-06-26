@@ -1,5 +1,6 @@
 package com.example.lostfound_project.controller;
 
+import com.example.lostfound_project.dto.MessageResponse;
 import com.example.lostfound_project.dto.NoticeRequest;
 import com.example.lostfound_project.dto.NoticeResponse;
 import com.example.lostfound_project.service.NoticeService;
@@ -27,7 +28,7 @@ public class NoticeController {
         try {
             return ResponseEntity.ok(noticeService.createNotice(request));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
     }
 
@@ -55,17 +56,17 @@ public class NoticeController {
                     .<ResponseEntity<?>>map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "공지 삭제", description = "공지 ID로 등록된 공지를 삭제합니다.")
-    public ResponseEntity<Void> deleteNotice(@PathVariable Long id) {
+    public ResponseEntity<MessageResponse> deleteNotice(@PathVariable Long id) {
         if (!noticeService.deleteNotice(id)) {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new MessageResponse("삭제되었습니다."));
     }
 }
