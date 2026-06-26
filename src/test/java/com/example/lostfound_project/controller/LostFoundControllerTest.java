@@ -1,7 +1,9 @@
 package com.example.lostfound_project.controller;
 
+import com.example.lostfound_project.dto.CommentResponse;
 import com.example.lostfound_project.dto.LostItemResponse;
 import com.example.lostfound_project.security.JwtAuthenticationFilter;
+import com.example.lostfound_project.service.CommentService;
 import com.example.lostfound_project.service.LostItemService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,9 @@ class LostFoundControllerTest {
 
     @MockitoBean
     private LostItemService lostItemService;
+
+    @MockitoBean
+    private CommentService commentService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -136,13 +141,38 @@ class LostFoundControllerTest {
     }
 
     @Test
-    void deleteLostItemReturnsMessage() throws Exception {
-        when(lostItemService.deleteLostItem(1L, "user1"))
-                .thenReturn(LostItemService.DeleteResult.SUCCESS);
+    void createCommentReturnsComment() throws Exception {
+        CommentResponse response = new CommentResponse(
+                1L,
+                10L,
+                "확인했습니다.",
+                "user1",
+                LocalDateTime.of(2026, 6, 26, 12, 0)
+        );
+        when(commentService.createComment(eq(10L), any(), eq("user1")))
+                .thenReturn(CommentService.CreateResult.success(response));
 
-        mockMvc.perform(delete("/api/lost/1")
+        mockMvc.perform(post("/api/lost/10/comments")
+                        .principal(() -> "user1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "content": "확인했습니다."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("확인했습니다."))
+                .andExpect(jsonPath("$.writer").value("user1"));
+    }
+
+    @Test
+    void deleteCommentReturnsMessage() throws Exception {
+        when(commentService.deleteComment(10L, 1L, "user1"))
+                .thenReturn(CommentService.DeleteResult.SUCCESS);
+
+        mockMvc.perform(delete("/api/lost/10/comments/1")
                         .principal(() -> "user1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("삭제되었습니다."));
+                .andExpect(jsonPath("$.message").value("댓글이 삭제되었습니다."));
     }
 }

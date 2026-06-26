@@ -1,5 +1,6 @@
 package com.example.lostfound_project;
 
+import com.example.lostfound_project.repository.CommentRepository;
 import com.example.lostfound_project.repository.LostItemRepository;
 import com.example.lostfound_project.repository.NoticeRepository;
 import com.example.lostfound_project.repository.UserRepository;
@@ -24,6 +25,9 @@ class LostfoundProjectApplicationTests {
 
     @MockitoBean
     private NoticeRepository noticeRepository;
+
+    @MockitoBean
+    private CommentRepository commentRepository;
 
     @Test
     void contextLoads() {

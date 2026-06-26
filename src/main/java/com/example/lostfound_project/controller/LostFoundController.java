@@ -1,10 +1,13 @@
 // src/main/java/com/example/lostfound_project/controller/LostFoundController.java
 package com.example.lostfound_project.controller;
 
+import com.example.lostfound_project.dto.CommentCreateRequest;
+import com.example.lostfound_project.dto.CommentResponse;
 import com.example.lostfound_project.dto.LostItemCreateRequest;
 import com.example.lostfound_project.dto.LostItemResponse;
 import com.example.lostfound_project.dto.LostItemUpdateRequest;
 import com.example.lostfound_project.dto.MessageResponse;
+import com.example.lostfound_project.service.CommentService;
 import com.example.lostfound_project.service.LostItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -22,9 +25,11 @@ import java.util.List;
 public class LostFoundController {
 
     private final LostItemService lostItemService;
+    private final CommentService commentService;
 
-    public LostFoundController(LostItemService lostItemService) {
+    public LostFoundController(LostItemService lostItemService, CommentService commentService) {
         this.lostItemService = lostItemService;
+        this.commentService = commentService;
     }
 
     // 분실물 등록
@@ -109,6 +114,52 @@ public class LostFoundController {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body(new MessageResponse(result.getMessage()));
+        }
+
+        return ResponseEntity.ok(new MessageResponse(result.getMessage()));
+    }
+
+    @GetMapping("/lost/{id}/comments")
+    @Operation(summary = "분실물 댓글 조회", description = "분실물 ID에 등록된 댓글 목록을 조회합니다.")
+    public List<CommentResponse> getComments(@PathVariable Long id) {
+        return commentService.getComments(id);
+    }
+
+    @PostMapping("/lost/{id}/comments")
+    @Operation(summary = "분실물 댓글 등록", description = "로그인한 사용자의 JWT 쿠키를 기준으로 댓글 작성자를 저장합니다.")
+    @SecurityRequirement(name = "accessTokenCookie")
+    public ResponseEntity<?> createComment(
+            @PathVariable Long id,
+            @RequestBody CommentCreateRequest request,
+            Principal principal) {
+        try {
+            CommentService.CreateResult result = commentService.createComment(id, request, principal.getName());
+
+            if (result.status() == CommentService.CreateStatus.NOT_FOUND) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok(result.comment());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/lost/{id}/comments/{commentId}")
+    @Operation(summary = "분실물 댓글 삭제", description = "JWT 쿠키의 사용자 ID가 댓글 작성자와 일치할 때만 댓글을 삭제합니다.")
+    @SecurityRequirement(name = "accessTokenCookie")
+    public ResponseEntity<MessageResponse> deleteComment(
+            @PathVariable Long id,
+            @PathVariable Long commentId,
+            Principal principal) {
+        CommentService.DeleteResult result = commentService.deleteComment(id, commentId, principal.getName());
+
+        if (result == CommentService.DeleteResult.NOT_FOUND) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (result != CommentService.DeleteResult.SUCCESS) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new MessageResponse(result.getMessage()));
         }
 
         return ResponseEntity.ok(new MessageResponse(result.getMessage()));
